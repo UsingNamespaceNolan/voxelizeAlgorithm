@@ -52,6 +52,10 @@ namespace wndwsFormsGUI {
 	private: System::Windows::Forms::Label^  label3;
 	private: System::Windows::Forms::Label^  label4;
 	private: System::Windows::Forms::NotifyIcon^  notifyIcon1;
+
+	private: System::ComponentModel::BackgroundWorker^  backgroundWorker1;
+
+
 	private: System::ComponentModel::IContainer^  components;
 
 
@@ -81,6 +85,7 @@ namespace wndwsFormsGUI {
 			this->label3 = (gcnew System::Windows::Forms::Label());
 			this->label4 = (gcnew System::Windows::Forms::Label());
 			this->notifyIcon1 = (gcnew System::Windows::Forms::NotifyIcon(this->components));
+			this->backgroundWorker1 = (gcnew System::ComponentModel::BackgroundWorker());
 			this->SuspendLayout();
 			// 
 			// button1
@@ -95,7 +100,7 @@ namespace wndwsFormsGUI {
 			// 
 			// button2
 			// 
-			this->button2->Location = System::Drawing::Point(691, 178);
+			this->button2->Location = System::Drawing::Point(691, 234);
 			this->button2->Name = L"button2";
 			this->button2->Size = System::Drawing::Size(75, 23);
 			this->button2->TabIndex = 1;
@@ -112,7 +117,7 @@ namespace wndwsFormsGUI {
 			// 
 			// textBox2
 			// 
-			this->textBox2->Location = System::Drawing::Point(179, 180);
+			this->textBox2->Location = System::Drawing::Point(179, 234);
 			this->textBox2->Name = L"textBox2";
 			this->textBox2->Size = System::Drawing::Size(479, 20);
 			this->textBox2->TabIndex = 3;
@@ -129,7 +134,7 @@ namespace wndwsFormsGUI {
 			// label2
 			// 
 			this->label2->AutoSize = true;
-			this->label2->Location = System::Drawing::Point(34, 183);
+			this->label2->Location = System::Drawing::Point(34, 237);
 			this->label2->Name = L"label2";
 			this->label2->Size = System::Drawing::Size(122, 13);
 			this->label2->TabIndex = 5;
@@ -147,7 +152,7 @@ namespace wndwsFormsGUI {
 			// label4
 			// 
 			this->label4->AutoSize = true;
-			this->label4->Location = System::Drawing::Point(34, 148);
+			this->label4->Location = System::Drawing::Point(34, 207);
 			this->label4->Name = L"label4";
 			this->label4->Size = System::Drawing::Size(41, 13);
 			this->label4->TabIndex = 7;
@@ -183,5 +188,8 @@ private: System::Void button1_Click(System::Object^  sender, System::EventArgs^ 
 
 private: System::Void button2_Click(System::Object^  sender, System::EventArgs^  e);
 
+//private: System::Void backgroundWorker1_DoWork(System::Object^ sender, System::ComponentModel::DoWorkEventArgs e);
+
+//private: System::Void backgroundWorker1_ProgressChanged(System::Object^ sender, System::ComponentModel::ProgressChangedEventArgs e);
 };
 }

@@ -67,6 +67,8 @@ void wndwsFormsGUI::Form1::button1_Click(System::Object^ sender, System::EventAr
 //when "voxelize!" button is clicked, this funcion is executed
 void wndwsFormsGUI::Form1::button2_Click(System::Object^ sender, System::EventArgs^ e)
 {
+	backgroundWorker1->RunWorkerAsync(1); 
+
 	String^ plyFilePath = textBox2->Text;
 	std::string plyFilePathU = msclr::interop::marshal_as<std::string>(plyFilePath);
 
@@ -304,15 +306,28 @@ void voxelizeVertices (long int** faces, float** vertices, RangeData modelRange,
 	modelNormalizing (modelRange, numVertices, vertices);
 
     //dynamic allocation of 3D voxel array
-    int*** voxelArray=new int** [modelRange.xRange+1]();
+    int*** voxelArray=new int** [modelRange.xRange+1];
     for (int i=0; i<(modelRange.xRange+1); i++)
     {
-        voxelArray[i]=new int* [modelRange.yRange+1]();
+        voxelArray[i]=new int* [modelRange.yRange+1];
         for (int j=0; j<(modelRange.yRange+1); j++)
         {
-            voxelArray[i][j]=new int [modelRange.zRange+1]();
+            voxelArray[i][j]=new int [modelRange.zRange+1];
         }
     }
+	//initializing the voxelArray
+	int air = (objectsAndVertices.groupNames.size()+1);
+	for (int initCountX=0; initCountX<(modelRange.xRange+1); initCountX++)
+	{
+		for (int initCountY=0; initCountY<(modelRange.yRange+1); initCountY++)
+		{
+			for (int initCountZ=0; initCountZ<(modelRange.zRange+1); initCountZ++)
+			{
+				voxelArray[initCountX][initCountY][initCountZ]=air;
+			}
+		}
+	}
+
     
     int vertexInc=0;
 	
@@ -324,7 +339,7 @@ void voxelizeVertices (long int** faces, float** vertices, RangeData modelRange,
             vertexInc++;
         }
     }
-
+	
 	
     voxelizeEdges(vertices, faces, numFaces, voxelArray, objectsAndVertices);
    
@@ -403,15 +418,21 @@ void voxelizeEdges (float** vertices, long int** faces, int numFaces, int*** vox
 	float unitVectorEdge1[COLUMNS], unitVectorEdge2[COLUMNS],
           unitVectorEdge3[COLUMNS], unitVectorEdge4[COLUMNS];
     
-    
+    int* augmentVertex=new int[objectsAndVertices.verticesPerObject.size()];
+	for (int augCount=0; augCount<objectsAndVertices.verticesPerObject.size(); augCount++)
+	{
+		for (int augCount2=0; augCount2<augCount; augCount2++)
+		{
+			augmentVertex[augCount]+=augmentVertex[augCount2];
+		}
+		augmentVertex[augCount]+=objectsAndVertices.verticesPerObject[augCount];
+	}
     for (int edgeVoxCount=0; edgeVoxCount<numFaces; edgeVoxCount++)
     {
-		int augmentVertex=objectsAndVertices.verticesPerObject[0];
-		int objectNumber=1;
         //determining which object it is
-        while ((faces[edgeVoxCount][0])>=augmentVertex)
-        {
-        	augmentVertex+=objectsAndVertices.verticesPerObject[objectNumber];
+		int objectNumber=1;
+        while ((faces[edgeVoxCount][0])>augmentVertex[objectNumber-1]) //you can use faces[edgeVoxCount][0], faces[edgeVoxCount][1], or faces[edgeVoxCount][2] because
+        {															   //each vertex on the same line in a ply file are the same object
             objectNumber++;
         }
 
@@ -1087,26 +1108,29 @@ void output (int***voxelArray, RangeData modelRange, Vectors objectsAndVertices)
 	std::ofstream file("C:/file.txt");
 	
 	file<<"c this input file was made with a CAD2Voxel algorithm\nc originally created by Nolan Johnston for the Human Monitoring Lab of Health Canada\n";
-	file<<"c\nc\nc\nc ++++++++++++++++++++++++++++++++++++++++++++++++++++++\nc\nc      Cells\nc ++++++++++++++++++++++++++++++++++++++++++++++++++++++\nc\n"; 
+	file<<"c\nc\nc\nc ++++++++++++++++++++++++++++++++++++++++++++++++++++++\nc      Cells\nc ++++++++++++++++++++++++++++++++++++++++++++++++++++++\nc\n"; 
 	file<<"c Filling Universes\n";
 
 	for (int headerCount=1; headerCount<=objectsAndVertices.groupNames.size(); headerCount++)
 	{
-		file<<"    "<<headerCount<<"   "<<headerCount<<"   "<<std::fixed<<std::setprecision(4)<<headerCount*-1<<"     -2 u = "<<headerCount<<
+		file<<"    "<<headerCount<<"   "<<headerCount<<"   "<<headerCount*-1<<"     -2 u = "<<headerCount<<
 			"       $ "<<objectsAndVertices.groupNames[headerCount-1]<<"\n";
 	}
+
+	file<<"    "<<objectsAndVertices.groupNames.size()+1<<"   "<<objectsAndVertices.groupNames.size()+1<<"   -"<<objectsAndVertices.groupNames.size()+1<<
+		"     -2 u = "<<objectsAndVertices.groupNames.size()+1<<"       $ "<<"air\n";
 	
 	file<<"c\nc Lattice Unit Cell\nc\nc array dimensions: x-> 0:"<<modelRange.xRange<<"		y-> 0:"<<modelRange.yRange<<"		z-> 0:"<<modelRange.zRange<<"\n\n     ";
 
 	bool init=false;
 	fout.outputCount=0;
 	//outputting the voxel itself
-	for (int pCountX=0; pCountX<(modelRange.xRange+1); pCountX++)
+	for (int pCountZ=0; pCountZ<(modelRange.zRange+1); pCountZ++)
 	{
 		for (int pCountY=0; pCountY<(modelRange.yRange+1); pCountY++)
 		{
-			for (int pCountZ=0; pCountZ<(modelRange.zRange+1); pCountZ++)
-			{/*
+			for (int pCountX=0; pCountX<(modelRange.xRange+1); pCountX++)
+			{
 				if (init==false)
 				{
 					outputInfo(fout, voxelArray, pCountX, pCountY, pCountZ);
@@ -1141,28 +1165,28 @@ void output (int***voxelArray, RangeData modelRange, Vectors objectsAndVertices)
 					}
 					outputInfo(fout, voxelArray, pCountX, pCountY, pCountZ);
 					fout.numRep=0;
-				}*/
+				}
 			
 
-				// this block of code outputs the voxel in a block 16 columns wide, in a non-repeated structure
-				if (fout.outputCount<16)
+				/* this block of code outputs the voxel in a lattice structure, this is a non-repeated structure
+				if (fout.outputCount<70)
 				{
+					outputInfo(fout, voxelArray, pCountX, pCountY, pCountZ);
 					file<<voxelArray[pCountX][pCountY][pCountZ]<<" ";
-					fout.outputCount++;
+					fout.outputCount+=(fout.currentDigits+1);
 				}
 				else
 				{
 					file<<"\n     ";
+					outputInfo(fout, voxelArray, pCountX, pCountY, pCountZ);
 					file<<voxelArray[pCountX][pCountY][pCountZ]<<" ";
-					fout.outputCount=1;
-				}
+					fout.outputCount=0;
+					fout.outputCount+=(fout.currentDigits+1);
+				}*/
 				
 			}
 		}
 	}
-
-
-
 	file.close();
 }
 void outputInfo(OutputData& fout, int*** voxelArray, int pCountX, int pCountY, int pCountZ)
