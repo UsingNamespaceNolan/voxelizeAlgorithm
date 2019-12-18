@@ -36,11 +36,10 @@ struct OutputData
 Vectors objectsAndVertices;
 RangeData modelRange;
 OutputData fout={0,0};
+bool fileFound=true;
 
 const int COLUMNS=3;
 int numVertices=0, numFaces=0;
-
-
 
 //function declarations
 Vectors readOBJFile (std::string objFilePathU);
@@ -59,31 +58,32 @@ void wndwsFormsGUI::Form1::button1_Click(System::Object^ sender, System::EventAr
 {
 	String^ objFilePath = textBox1->Text;
 	std::string objFilePathU = msclr::interop::marshal_as<std::string>(objFilePath);
-	
+	fileFound=true;
     objectsAndVertices=readOBJFile(objFilePathU);
+	if(fileFound)
 	System::Windows::Forms::MessageBox::Show("obj file successfully parsed");
 }
 
 //when "voxelize!" button is clicked, this funcion is executed
 void wndwsFormsGUI::Form1::button2_Click(System::Object^ sender, System::EventArgs^ e)
 {
-	backgroundWorker1->RunWorkerAsync(1); 
+		std::ifstream plyFile;
+		String^ plyFilePath = textBox2->Text;
+		std::string plyFilePathU = msclr::interop::marshal_as<std::string>(plyFilePath);
 
-	String^ plyFilePath = textBox2->Text;
-	std::string plyFilePathU = msclr::interop::marshal_as<std::string>(plyFilePath);
+		std::wstring widestr = std::wstring(plyFilePathU.begin(), plyFilePathU.end());
+		const wchar_t* widecstr = widestr.c_str();
 
-	std::wstring widestr = std::wstring(plyFilePathU.begin(), plyFilePathU.end());
-	const wchar_t* widecstr = widestr.c_str();
+		plyFile.open(widecstr);
 
-	std::ifstream plyFile;
-	plyFile.open(widecstr);
-
-    if (!plyFile)
-	{
-		System::Windows::Forms::MessageBox::Show("no input ply file found to voxelize, make sure the file path and name are correct");
-        //system("pause");
-        //exit(1);
-	}
+		if (!plyFile)
+		{
+			System::Windows::Forms::MessageBox::Show("no input ply file found to voxelize, make sure the file path and name are correct");
+			return;
+			//system("pause");
+			//exit(1);
+		}
+	
 
 	plyHeaderInput (plyFile, numVertices, numFaces);
 	modelRange.highestX=-1000000;
@@ -107,14 +107,46 @@ void wndwsFormsGUI::Form1::button2_Click(System::Object^ sender, System::EventAr
 	readFaces (plyFile, faces, numFaces);
 
 	voxelizeVertices (faces, vertices, modelRange, numVertices, numFaces, objectsAndVertices);
+
 	System::Windows::Forms::MessageBox::Show("Successfully voxelized CAD model");
-
-
 	/*************OUTPUTTEST*************/
 	/*std::ofstream file("C:/file.txt");*/
 	/************************************/
 }
 
+
+//when the top "Browse..." button is clicked this function is executed
+void wndwsFormsGUI::Form1::button3_Click(System::Object^ sender, System::EventArgs^ e)
+{
+	OpenFileDialog^ openFileDialog1 = gcnew OpenFileDialog;
+
+      openFileDialog1->InitialDirectory = "c:\\";
+      openFileDialog1->Filter = "txt files (*.txt)|*.txt|All files (*.*)|*.*";
+      openFileDialog1->FilterIndex = 2;
+      openFileDialog1->RestoreDirectory = true;
+
+      if ( openFileDialog1->ShowDialog() == System::Windows::Forms::DialogResult::OK )
+      {
+		  System::String^ objFilePath=openFileDialog1->FileName;
+          wndwsFormsGUI::Form1::textBox1->Text=objFilePath;
+      }
+}
+//when the bottom "Browse..." button is clicked this function is executed
+void wndwsFormsGUI::Form1::button4_Click(System::Object^ sender, System::EventArgs^ e)
+{
+	  OpenFileDialog^ openFileDialog1 = gcnew OpenFileDialog;
+
+      openFileDialog1->InitialDirectory = "c:\\";
+      openFileDialog1->Filter = "txt files (*.txt)|*.txt|All files (*.*)|*.*";
+      openFileDialog1->FilterIndex = 2;
+      openFileDialog1->RestoreDirectory = true;
+
+      if ( openFileDialog1->ShowDialog() == System::Windows::Forms::DialogResult::OK )
+      {
+		  System::String^ plyFilePath=openFileDialog1->FileName;
+          wndwsFormsGUI::Form1::textBox2->Text=plyFilePath;
+      }
+}
 //function definitions
 Vectors readOBJFile(std::string objFilePathU)
 {      
@@ -127,12 +159,14 @@ Vectors readOBJFile(std::string objFilePathU)
     if (!objFile)
 	{
 		System::Windows::Forms::MessageBox::Show("no input obj file found to analyze, make sure the file path and name are correct");
+		fileFound=false;
+		Vectors nullVectors;
+		return nullVectors;
         //system("pause");
         //exit(1);
 	}
-	else
-	{
-		std::string fileInput;
+	
+	   std::string fileInput;
 
 	   int vertexCount=0, groupCount=0, objectCount=0, totalCount=1;
        
@@ -199,7 +233,7 @@ Vectors readOBJFile(std::string objFilePathU)
 	   }while(objFile);
        
 	   objFile.close();
-   }
+   
     return functionVectors;
 }
 
@@ -299,29 +333,29 @@ void voxelizeVertices (long int** faces, float** vertices, RangeData modelRange,
 	if (modelRange.zRange<0)
 		modelRange.zRange=modelRange.zRange*-1;
 
-	modelRange.xRange+=1;												//have to add 1 to the ranges because a few lines up, floats are converted to ints, which means
-	modelRange.yRange+=1;												//something like 5.8 becomes 5. the extra 0.8 may cause problems later on, so lets just add 1 and 
-	modelRange.zRange+=1;												//not worry about it.		
+	modelRange.xRange+=2;												//have to add 1 to the ranges because a few lines up, floats are converted to ints, which means
+	modelRange.yRange+=2;												//something like 5.8 becomes 5. the extra 0.8 may cause problems later on, so lets just add 1 and 
+	modelRange.zRange+=2;												//not worry about it.		
 
 	modelNormalizing (modelRange, numVertices, vertices);
 
     //dynamic allocation of 3D voxel array
-    int*** voxelArray=new int** [modelRange.xRange+1];
-    for (int i=0; i<(modelRange.xRange+1); i++)
+    int*** voxelArray=new int** [modelRange.xRange];
+    for (int i=0; i<(modelRange.xRange); i++)
     {
-        voxelArray[i]=new int* [modelRange.yRange+1];
-        for (int j=0; j<(modelRange.yRange+1); j++)
+        voxelArray[i]=new int* [modelRange.yRange];
+        for (int j=0; j<(modelRange.yRange); j++)
         {
-            voxelArray[i][j]=new int [modelRange.zRange+1];
+            voxelArray[i][j]=new int [modelRange.zRange];
         }
     }
 	//initializing the voxelArray
 	int air = (objectsAndVertices.groupNames.size()+1);
-	for (int initCountX=0; initCountX<(modelRange.xRange+1); initCountX++)
+	for (int initCountX=0; initCountX<(modelRange.xRange); initCountX++)
 	{
-		for (int initCountY=0; initCountY<(modelRange.yRange+1); initCountY++)
+		for (int initCountY=0; initCountY<(modelRange.yRange); initCountY++)
 		{
-			for (int initCountZ=0; initCountZ<(modelRange.zRange+1); initCountZ++)
+			for (int initCountZ=0; initCountZ<(modelRange.zRange); initCountZ++)
 			{
 				voxelArray[initCountX][initCountY][initCountZ]=air;
 			}
@@ -346,9 +380,9 @@ void voxelizeVertices (long int** faces, float** vertices, RangeData modelRange,
     output (voxelArray, modelRange, objectsAndVertices);
     
     //deallocating voxelArray
-    for(int l=0;l<(modelRange.xRange+1);l++)
+    for(int l=0;l<(modelRange.xRange);l++)
     {
-        for(int m=0;m<(modelRange.yRange+1);m++)
+        for(int m=0;m<(modelRange.yRange);m++)
         {
             delete[] voxelArray[l][m];
         }
@@ -418,8 +452,8 @@ void voxelizeEdges (float** vertices, long int** faces, int numFaces, int*** vox
 	float unitVectorEdge1[COLUMNS], unitVectorEdge2[COLUMNS],
           unitVectorEdge3[COLUMNS], unitVectorEdge4[COLUMNS];
     
-    int* augmentVertex=new int[objectsAndVertices.verticesPerObject.size()];
-	for (int augCount=0; augCount<objectsAndVertices.verticesPerObject.size(); augCount++)
+    int* augmentVertex=new int[objectsAndVertices.groupNames.size()];
+	for (int augCount=0; augCount<objectsAndVertices.groupNames.size(); augCount++)
 	{
 		for (int augCount2=0; augCount2<augCount; augCount2++)
 		{
@@ -431,9 +465,9 @@ void voxelizeEdges (float** vertices, long int** faces, int numFaces, int*** vox
     {
         //determining which object it is
 		int objectNumber=1;
-        while ((faces[edgeVoxCount][0])>augmentVertex[objectNumber-1]) //you can use faces[edgeVoxCount][0], faces[edgeVoxCount][1], or faces[edgeVoxCount][2] because
-        {															   //each vertex on the same line in a ply file are the same object
-            objectNumber++;
+        while ((faces[edgeVoxCount][0])>augmentVertex[objectNumber-1] && objectsAndVertices.groupNames.size()!=1)
+        {												//you can use faces[edgeVoxCount][0], faces[edgeVoxCount][1], or faces[edgeVoxCount][2] because			 
+			objectNumber++;							   //each vertex on the same line in a ply file are the same object
         }
 
         bool reachedVertice=false;
@@ -1105,7 +1139,7 @@ void voxelizeFaces (float** vertices, long int** faces, int faceVoxCount, int***
 }
 void output (int***voxelArray, RangeData modelRange, Vectors objectsAndVertices)
 {
-	std::ofstream file("C:/file.txt");
+	std::ofstream file("C:/voxelFile.txt");
 	
 	file<<"c this input file was made with a CAD2Voxel algorithm\nc originally created by Nolan Johnston for the Human Monitoring Lab of Health Canada\n";
 	file<<"c\nc\nc\nc ++++++++++++++++++++++++++++++++++++++++++++++++++++++\nc      Cells\nc ++++++++++++++++++++++++++++++++++++++++++++++++++++++\nc\n"; 
@@ -1125,11 +1159,11 @@ void output (int***voxelArray, RangeData modelRange, Vectors objectsAndVertices)
 	bool init=false;
 	fout.outputCount=0;
 	//outputting the voxel itself
-	for (int pCountZ=0; pCountZ<(modelRange.zRange+1); pCountZ++)
+	for (int pCountZ=0; pCountZ<(modelRange.zRange); pCountZ++)
 	{
-		for (int pCountY=0; pCountY<(modelRange.yRange+1); pCountY++)
+		for (int pCountY=0; pCountY<(modelRange.yRange); pCountY++)
 		{
-			for (int pCountX=0; pCountX<(modelRange.xRange+1); pCountX++)
+			for (int pCountX=0; pCountX<(modelRange.xRange); pCountX++)
 			{
 				if (init==false)
 				{
@@ -1149,7 +1183,7 @@ void output (int***voxelArray, RangeData modelRange, Vectors objectsAndVertices)
 						fout.currentColumns+=(fout.currentDigits+1);
 						if (fout.currentColumns>20)
 						{
-							file<<"\n";
+							file<<"\n     ";
 							fout.currentColumns=0;
 						}
 					}
@@ -1159,7 +1193,7 @@ void output (int***voxelArray, RangeData modelRange, Vectors objectsAndVertices)
 						fout.currentColumns+=(fout.currentDigits+2);
 						if (fout.currentColumns>20)
 						{
-							file<<"\n";
+							file<<"\n     ";
 							fout.currentColumns=0;
 						}
 					}
